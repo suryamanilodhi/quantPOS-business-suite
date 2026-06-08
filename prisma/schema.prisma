@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  CASHIER
+  INVENTORY_STAFF
+}
+
+enum UnitType {
+  PCS
+  KG
+  LITRE
+  PACKET
+  BOX
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+  PARTIAL
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  CREDIT
+}
+
+enum StockMovementType {
+  OPENING
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+  PURCHASE
+  SALE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  TRIAL
+  PAST_DUE
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  name      RoleName @unique
+  users     User[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  active       Boolean   @default(true)
+  roleId       String
+  role         Role      @relation(fields: [roleId], references: [id])
+  shopId       String?
+  shop         Shop?     @relation(fields: [shopId], references: [id])
+  sales        Sale[]    @relation("SaleCashier")
+  purchases    Purchase[] @relation("PurchaseCreator")
+  expenses     Expense[] @relation("ExpenseCreator")
+  activityLogs ActivityLog[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([shopId])
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  priceInr    Decimal  @db.Decimal(12, 2)
+  staffLimit  Int
+  productLimit Int
+  features    String[]
+  shops       Shop[]
+  createdAt   DateTime @default(now())
+}
+
+model Shop {
+  id            String             @id @default(cuid())
+  name          String
+  gstNumber     String?
+  address       String?
+  phone         String?
+  currency      String             @default("INR")
+  active        Boolean            @default(true)
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  planId        String?
+  plan          SubscriptionPlan?  @relation(fields: [planId], references: [id])
+  users         User[]
+  categories    Category[]
+  products      Product[]
+  vendors       Vendor[]
+  customers     Customer[]
+  purchases     Purchase[]
+  sales         Sale[]
+  stockMovements StockMovement[]
+  expenses      Expense[]
+  invoiceSetting InvoiceSetting?
+  activityLogs  ActivityLog[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([shopId, name])
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  name           String
+  sku            String
+  barcode        String?
+  imageUrl       String?
+  unitType       UnitType        @default(PCS)
+  purchasePrice  Decimal         @db.Decimal(12, 2)
+  sellingPrice   Decimal         @db.Decimal(12, 2)
+  taxPercent     Decimal         @default(0) @db.Decimal(5, 2)
+  openingStock   Int             @default(0)
+  currentStock   Int             @default(0)
+  lowStockAlert  Int             @default(5)
+  active         Boolean         @default(true)
+  categoryId     String?
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  shopId         String
+  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  purchaseItems  PurchaseItem[]
+  saleItems      SaleItem[]
+  stockMovements StockMovement[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([shopId, sku])
+  @@index([shopId])
+}
+
+model Vendor {
+  id          String     @id @default(cuid())
+  name        String
+  phone       String?
+  email       String?
+  gstNumber   String?
+  address     String?
+  shopId      String
+  shop        Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  purchases   Purchase[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([shopId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  sales     Sale[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId])
+}
+
+model Purchase {
+  id            String        @id @default(cuid())
+  invoiceNumber String
+  vendorId      String
+  vendor        Vendor        @relation(fields: [vendorId], references: [id])
+  shopId        String
+  shop          Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdById   String
+  createdBy     User          @relation("PurchaseCreator", fields: [createdById], references: [id])
+  subtotal      Decimal       @db.Decimal(12, 2)
+  taxTotal      Decimal       @db.Decimal(12, 2)
+  discountTotal Decimal       @default(0) @db.Decimal(12, 2)
+  grandTotal    Decimal       @db.Decimal(12, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+  items         PurchaseItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([shopId, invoiceNumber])
+  @@index([shopId])
+}
+
+model PurchaseItem {
+  id            String   @id @default(cuid())
+  purchaseId    String
+  purchase      Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+  quantity      Int
+  purchasePrice Decimal  @db.Decimal(12, 2)
+  taxPercent    Decimal  @default(0) @db.Decimal(5, 2)
+  discount      Decimal  @default(0) @db.Decimal(12, 2)
+  total         Decimal  @db.Decimal(12, 2)
+}
+
+model Sale {
+  id            String        @id @default(cuid())
+  invoiceNumber String
+  customerId    String?
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  shopId        String
+  shop          Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  cashierId     String
+  cashier       User          @relation("SaleCashier", fields: [cashierId], references: [id])
+  subtotal      Decimal       @db.Decimal(12, 2)
+  taxTotal      Decimal       @db.Decimal(12, 2)
+  discountTotal Decimal       @default(0) @db.Decimal(12, 2)
+  grandTotal    Decimal       @db.Decimal(12, 2)
+  paymentMethod PaymentMethod @default(CASH)
+  paymentStatus PaymentStatus @default(PAID)
+  items         SaleItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([shopId, invoiceNumber])
+  @@index([shopId])
+}
+
+model SaleItem {
+  id           String   @id @default(cuid())
+  saleId       String
+  sale         Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Int
+  sellingPrice Decimal  @db.Decimal(12, 2)
+  taxPercent   Decimal  @default(0) @db.Decimal(5, 2)
+  discount     Decimal  @default(0) @db.Decimal(12, 2)
+  total        Decimal  @db.Decimal(12, 2)
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  shopId      String
+  shop        Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product           @relation(fields: [productId], references: [id])
+  type        StockMovementType
+  quantity    Int
+  note        String?
+  reference   String?
+  createdAt   DateTime          @default(now())
+
+  @@index([shopId])
+  @@index([productId])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation("ExpenseCreator", fields: [createdById], references: [id])
+  category    String
+  amount      Decimal  @db.Decimal(12, 2)
+  date        DateTime
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shopId])
+}
+
+model InvoiceSetting {
+  id            String   @id @default(cuid())
+  shopId        String   @unique
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  invoicePrefix String   @default("QP")
+  taxEnabled    Boolean  @default(true)
+  defaultTax    Decimal  @default(0) @db.Decimal(5, 2)
+  footerNote    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String
+  resourceId String?
+  message    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([shopId])
+  @@index([userId])
+  @@index([resource, resourceId])
+}

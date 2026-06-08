@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: 30 64 175;
+  --color-muted: 71 85 105;
+  --color-line: 191 219 254;
+  --color-surface: 239 246 255;
+  --color-card: 255 255 255;
+  --color-subtle: 239 246 255;
+  --color-hover: 219 234 254;
+  --color-icon: 37 99 235;
+  --color-active-ink: 37 99 235;
+  --color-active-text: 255 255 255;
+  color-scheme: light;
+  background: #eff6ff;
+}
+
+.dark {
+  --color-ink: 219 234 254;
+  --color-muted: 147 197 253;
+  --color-line: 30 64 175;
+  --color-surface: 15 23 42;
+  --color-card: 23 37 84;
+  --color-subtle: 30 58 138;
+  --color-hover: 30 64 175;
+  --color-icon: 147 197 253;
+  --color-active-ink: 37 99 235;
+  --color-active-text: 255 255 255;
+  color-scheme: dark;
+  background: rgb(var(--color-surface));
+}
+
+* {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-ink));
+  font-family: Aptos, "Segoe UI", "Helvetica Neue", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: geometricPrecision;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  outline: none;
+}
+
+input,
+select,
+textarea {
+  color: rgb(var(--color-ink));
+}
+
+@layer utilities {
+  .dark .bg-white {
+    background-color: rgb(var(--color-card) / var(--tw-bg-opacity, 1));
+  }
+
+  .dark .bg-white\/90 {
+    background-color: rgb(var(--color-card) / 0.9);
+  }
+
+  .dark .bg-white\/95 {
+    background-color: rgb(var(--color-card) / 0.95);
+  }
+
+  .dark .bg-slate-50,
+  .dark .bg-slate-100 {
+    background-color: rgb(var(--color-subtle) / var(--tw-bg-opacity, 1));
+  }
+
+  .dark .hover\:bg-slate-50:hover,
+  .dark .hover\:bg-slate-100:hover {
+    background-color: rgb(var(--color-hover) / var(--tw-bg-opacity, 1));
+  }
+
+  .dark .text-slate-400,
+  .dark .text-slate-600,
+  .dark .text-slate-700 {
+    color: rgb(var(--color-muted) / var(--tw-text-opacity, 1));
+  }
+
+  .dark .bg-ink {
+    background-color: rgb(var(--color-active-ink) / var(--tw-bg-opacity, 1));
+  }
+
+  .dark .bg-ink.text-white {
+    color: rgb(var(--color-active-text) / var(--tw-text-opacity, 1));
+  }
+
+  .dark .placeholder\:text-slate-400::placeholder {
+    color: rgb(var(--color-muted) / 0.75);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
